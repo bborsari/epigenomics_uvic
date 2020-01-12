@@ -1,0 +1,208 @@
+#*******
+# 1. prepare folders to store
+# different results
+mkdir -p fastq.files bigBed.files bigWig.files bed.files tsv.files pipeline.run downstream.analyses
+#*******
+
+#*******
+# 2. download metadata for 
+# experiments with Assay type = "DNA binding"
+# and Biosample term name: "stomach" AND "sigmoid colon" 
+../bin/download.metadata.sh "https://www.encodeproject.org/metadata/?type=Experiment&replicates.library.biosample.donor.uuid=d370683e-81e7-473f-8475-7716d027849b&status=released&assembly=GRCh38&biosample_ontology.term_name=sigmoid+colon&biosample_ontology.term_name=stomach&assay_slims=DNA+binding" 
+#*******
+
+#*******
+# 3. check how many fastq files are available for the experiment of interest (H3K4me3, stomach)
+grep -F H3K4me3 metadata.tsv | grep -F stomach | awk 'BEGIN{FS="\t"}$2=="fastq"{n++}END{print n}' 
+#*******
+
+#*******
+# 4. retrieve fastq files' ids for IP
+# please note that there are no control files annotated,
+# (audit term "Missing_controlled_by") 
+# so we have to retrieve them manually
+# from the experiment's page on the ENCODE portal 
+# (https://www.encodeproject.org/experiments/ENCSR063HOI/)
+grep -F H3K4me3 metadata.tsv | grep -F stomach | awk 'BEGIN{FS=OFS="\t"; print "file_id\ttissue\ttarget\ttype"}$2=="fastq"{print $1, $7, $19, "IP"}' > fastq.ids.txt
+#*******
+
+#*******
+# 5. manually add fastq files' ids for control experiment
+for filename in ENCFF752FJE ENCFF425YBL ENCFF233IBR ENCFF362JMQ; do echo -e "$filename\tstomach\tH3K4me3-human\tcontrol" >> fastq.ids.txt; done
+#*******
+
+#*******
+# 6. download fastq files (for both IP and control)
+# inside fastq.files folder
+cut -f1 fastq.ids.txt | tail -n+2 | while read filename; do wget -P fastq.files "https://www.encodeproject.org/files/$filename/@@download/$filename.fastq.gz"; done
+#*******
+
+#*******
+# 7. check md5sum of the downloaded fastq files
+
+# 7.1. retrieve md5sum of fastq files from the metadata
+../bin/selectRows.sh <(cut -f1 fastq.ids.txt) metadata.tsv | cut -f1,41 > fastq.files/md5sum.txt
+
+# 7.2. compute md5sum on the downloaded fastq files  
+cat fastq.files/md5sum.txt | while read filename original_md5sum; do md5sum fastq.files/"$filename".fastq.gz | awk -v filename="$filename" -v original_md5sum="$original_md5sum" 'BEGIN{FS=" "; OFS="\t"}{print filename, original_md5sum, $1}'; done > tmp; mv tmp fastq.files/md5sum.txt
+
+# 7.3. make sure there are no files 
+# for which original and computed 
+# md5sum values differ
+awk '$2!=$3' fastq.files/md5sum.txt 
+#*******
+
+#*******
+# 8. prepare folder to store the genome database
+mkdir pipeline.run/genome
+#*******
+
+#*******
+# 9. download genome database
+# please note: update path to chip-seq-pipeline2
+# according to where you installed it
+bash ~/chip-seq-pipeline2/scripts/download_genome_data.sh hg38 pipeline.run/genome
+#*******
+
+#*******
+# 10. check run-type (paired- or single-end)
+# of IP & control experiments
+# please note: you will need to specify it in the input json file
+../bin/selectRows.sh <(cut -f1 fastq.ids.txt) metadata.tsv | cut -f35
+#*******
+
+#*******
+# 11. check fragment length of IP & control experiments
+# please note: you may need to provide it in 
+# the input json file in case
+# the pipeline fails to compute it
+../bin/selectRows.sh <(cut -f1 fastq.ids.txt) metadata.tsv | cut -f33
+#*******
+
+#*******
+# 12. run pipeline
+cd pipeline.run
+caper run ~/chip-seq-pipeline2/chip.wdl -i input.histone.json --docker > log.txt
+cd ..
+#*******
+
+#*******
+# 13. retrieve ids for bigBed peak calling files
+grep -F H3K4me3 metadata.tsv | awk 'BEGIN{FS=OFS="\t"; print "file_id\ttissue\ttarget" } $2=="bigBed_narrowPeak" && $3=="stable_peaks" && $44!="hg19" {print $1, $7, $19}' > bigBed.peaks.ids.txt
+#*******
+
+#*******
+# 14. retrieve ids for bigWig fold-change files
+grep -F H3K4me3 metadata.tsv | awk 'BEGIN{FS=OFS="\t"; print "file_id\ttissue\ttarget" } $2=="bigWig" && $3=="fold_change_over_control" && $44!="hg19" {print $1, $7, $19}' > bigWig.FC.ids.txt
+#*******
+
+#*******
+# 15. download bigBed and bigWig files
+# inside the corresponding folders
+
+# 15.1 bigBed files
+cut -f1 bigBed.peaks.ids.txt | tail -n+2 | while read filename; do wget -P bigBed.files "https://www.encodeproject.org/files/$filename/@@download/$filename.bigBed"; done
+
+# 15.2 bigWig files
+cut -f1 bigWig.FC.ids.txt | tail -n+2 | while read filename; do wget -P bigWig.files "https://www.encodeproject.org/files/$filename/@@download/$filename.bigWig"; done
+#*******
+
+#*******
+# 16. check md5sum of the downloaded 
+# bigBed and bigWig files
+
+for file_type in bigBed bigWig; do
+	
+	# 16.1. retrieve md5sum of the files from the metadata
+	../bin/selectRows.sh <(cut -f1 "$file_type".*.ids.txt) metadata.tsv | cut -f1,41 > "$file_type".files/md5sum.txt
+	
+	# 16.2. compute md5sum on the downloaded files  
+	cat "$file_type".files/md5sum.txt | while read filename original_md5sum; do md5sum "$file_type".files/"$filename"."$file_type" | awk -v filename="$filename" -v original_md5sum="$original_md5sum" 'BEGIN{FS=" "; OFS="\t"}{print filename, original_md5sum, $1}'; done > tmp; mv tmp "$file_type".files/md5sum.txt
+	
+	# 16.3. make sure there are no files for which original and computed md5sum values differ
+	awk '$2!=$3' "$file_type".files/md5sum.txt
+
+done
+#******
+
+#******
+# 17. retrieve gtf file for gencode v24
+# manual download from: https://www.encodeproject.org/references/ENCSR884DHJ/
+mv Downloads/gencode.v24.primary_assembly.annotation.gtf.gz .
+#******
+
+#******
+# 18. uncompress gtf.gz file
+gunzip gencode.v24.primary_assembly.annotation.gtf.gz
+#******
+
+#******
+# 19. prepare bed file with gene body
+# coordinates for protein coding genes
+awk '$3=="gene"' gencode.v24.primary_assembly.annotation.gtf | grep -F "protein_coding" | cut -d ";" -f1 | awk 'BEGIN{OFS="\t"}{print $1, $4, $5, $10, 0, $7, $10}' | sed 's/\"//g' | awk 'BEGIN{FS=OFS="\t"}$1!="chrM"{$2=($2-1); print $0}' > bed.files/gencode.v24.protein.coding.gene.body.bed
+#******
+
+#******
+# 20. retrieve (manually) ids for total RNA-Seq
+# gene quantification .tsv files
+echo -e "file_id\ttissue\nENCFF268RWA\tsigmoid_colon\nENCFF918KPC\tstomach" > tsv.totalRNASeq.ids.txt
+#******
+
+#******
+# 21. download .tsv files
+cut -f1 tsv.totalRNASeq.ids.txt | tail -n+2 | while read filename; do wget -P tsv.files "https://www.encodeproject.org/files/$filename/@@download/$filename.tsv"; done
+#******
+
+#******
+# 22. keep only protein-coding genes from tsv files
+cut -f1 tsv.totalRNASeq.ids.txt | tail -n+2 | while read filename; do ../bin/selectRows.sh <(cut -f4 bed.files/gencode.v24.protein.coding.gene.body.bed) <(cut -f1,6 tsv.files/"$filename".tsv) > tmp; mv tmp tsv.files/"$filename".tsv; done
+#******
+
+#******
+# 23. select the 1000 most expressed genes in each of the two tissues
+tail -n+2 tsv.totalRNASeq.ids.txt | while read filename tissue; do sort -k2,2gr tsv.files/"$filename".tsv | head -1000 | cut -f1 > tsv.files/"$tissue".1000.most.expressed.genes.txt; done
+#******
+
+#******
+# 24. select the 1000 least expressed genes in each of the two tissues
+tail -n+2 tsv.totalRNASeq.ids.txt | while read filename tissue; do sort -k2,2gr tsv.files/"$filename".tsv | tail -1000 | cut -f1 > tsv.files/"$tissue".1000.least.expressed.genes.txt; done
+#******
+
+#******
+# 25. prepare bed files for 1000 
+# most and least expressed
+# genes in the 2 tissues
+
+# 25.1. 1000 least expressed
+for tissue in stomach sigmoid_colon; do ../bin/selectRows.sh tsv.files/"$tissue".1000.least.expressed.genes.txt <(awk 'BEGIN{FS=OFS="\t"}{print $4, $0}' bed.files/gencode.v24.protein.coding.gene.body.bed) | cut -f2- > bed.files/"$tissue".1000.least.expressed.genes.bed; done
+
+# 25.2. 1000 most expressed
+for tissue in stomach sigmoid_colon; do ../bin/selectRows.sh tsv.files/"$tissue".1000.most.expressed.genes.txt <(awk 'BEGIN{FS=OFS="\t"}{print $4, $0}' bed.files/gencode.v24.protein.coding.gene.body.bed) | cut -f2- > bed.files/"$tissue".1000.most.expressed.genes.bed; done
+#******
+
+#******
+# 26. prepare folder to store
+# results for aggregation analysis
+mkdir downstream.analyses/aggregation.plot
+#******
+
+#******
+# 27. run bwtool aggregate
+
+# 27.1. - stomach 
+# 27.1.1. - 1000 most expressed genes
+bwtool aggregate 2000:2000 -starts -keep-bed bed.files/stomach.1000.most.expressed.genes.bed bigWig.files/ENCFF373VDB.bigWig downstream.analyses/aggregation.plot/stomach.1000.most.expressed.genes.aggregate.tsv
+# 27.1.2. - 1000 least expressed genes
+bwtool aggregate 2000:2000 -starts -keep-bed bed.files/stomach.1000.least.expressed.genes.bed bigWig.files/ENCFF373VDB.bigWig downstream.analyses/aggregation.plot/stomach.1000.least.expressed.genes.aggregate.tsv
+
+# 27.2. - sigmoid_colon
+# 27.2.1. - 1000 most expressed genes
+bwtool aggregate 2000:2000 -starts -keep-bed bed.files/sigmoid_colon.1000.most.expressed.genes.bed bigWig.files/ENCFF647ISC.bigWig downstream.analyses/aggregation.plot/sigmoid_colon.1000.most.expressed.genes.aggregate.tsv
+# 27.2.2. - 1000 least expressed genes
+bwtool aggregate 2000:2000 -starts -keep-bed bed.files/sigmoid_colon.1000.least.expressed.genes.bed bigWig.files/ENCFF647ISC.bigWig downstream.analyses/aggregation.plot/sigmoid_colon.1000.least.expressed.genes.aggregate.tsv
+#******
+
+#******
+# 28. make aggregation plot
+for tissue in stomach sigmoid_colon; do Rscript ../bin/aggregation.plot.R --most downstream.analyses/aggregation.plot/"$tissue".1000.most.expressed.genes.aggregate.tsv --least downstream.analyses/aggregation.plot/"$tissue".1000.least.expressed.genes.aggregate.tsv --tissue "$tissue" --output downstream.analyses/aggregation.plot/aggregation.plot."$tissue".pdf; done
+#******
