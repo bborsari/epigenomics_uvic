@@ -137,6 +137,9 @@ add_header () {
 }
 
 
+# 2. define function
+# selectColumns
+
 selectColumns () {
 
 	[ $# -ge 1 -a -f "$2" ] && input="$2" || input="-"
