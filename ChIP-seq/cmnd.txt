@@ -206,3 +206,89 @@ bwtool aggregate 2000:2000 -starts -keep-bed bed.files/sigmoid_colon.1000.least.
 # 28. make aggregation plot
 for tissue in stomach sigmoid_colon; do Rscript ../bin/aggregation.plot.R --most downstream.analyses/aggregation.plot/"$tissue".1000.most.expressed.genes.aggregate.tsv --least downstream.analyses/aggregation.plot/"$tissue".1000.least.expressed.genes.aggregate.tsv --tissue "$tissue" --output downstream.analyses/aggregation.plot/aggregation.plot."$tissue".pdf; done
 #******
+
+#******
+# 29. prepare folder to 
+# store results from building ChIP-seq matrix
+mkdir -p downstream.analyses/build.matrix/bwtool
+#******
+
+#******
+# 30. prepare bed file
+# with coordinates of 
+# non-redundant TSSs (all genes)
+../bin/non.redundant.TSS.sh gencode.v24.primary_assembly.annotation.gtf > bed.files/gencode.v24.all.genes.non.redundant.TSS.bed
+#******
+
+#******
+# 31. prepare bed file 
+# with coordinates of  
+# non-redundant TSSs (protein coding genes)
+../bin/selectRows.sh <(cut -f7 bed.files/gencode.v24.protein.coding.gene.body.bed) <(awk 'BEGIN{FS=OFS="\t"}{print $7, $0}' bed.files/gencode.v24.all.genes.non.redundant.TSS.bed) | cut -f2- > bed.files/gencode.v24.protein.coding.non.redundant.TSS.bed
+#******
+
+#******
+# 32. prepare list of bigWig 
+# FC files to be used 
+# to build the matrix
+my_pwd=$(pwd); tail -n+2 bigWig.FC.ids.txt | cut -f1 | awk -v pwd="$my_pwd" '{print pwd"/bigWig.files/"$1".bigWig"}' > downstream.analyses/build.matrix/FC.bw.txt
+#******
+
+#******
+# 33. convert bigBed files 
+# to bed files
+tail -n+2 bigBed.peaks.ids.txt | cut -f1 | while read filename; do bigBedToBed bigBed.files/"$filename".bigBed bed.files/"$filename".bed; done
+#******
+
+#******
+# 34. prepare list of bed
+# peak files to be used
+# to build the matrix
+my_pwd=$(pwd); tail -n+2 bigBed.peaks.ids.txt | cut -f1 | awk -v pwd="$my_pwd" '{print pwd"/bed.files/"$1".bed"}' > downstream.analyses/build.matrix/peaks.bed.txt
+#******
+
+#******
+# 35. get H3K4me3 matrix
+my_pwd=$(pwd); ../bin/get.matrix.chipseq.sh --bw downstream.analyses/build.matrix/FC.bw.txt --bedfile "$my_pwd"/bed.files/gencode.v24.protein.coding.non.redundant.TSS.bed --target H3K4me3 --outFolder downstream.analyses/build.matrix/bwtool --outFile downstream.analyses/build.matrix/H3K4me3.matrix.tsv --signal median --peaks downstream.analyses/build.matrix/peaks.bed.txt --keep yes
+#******
+
+#******
+# 36. update header
+awk 'BEGIN{FS=OFS="\t"}{if (NR==1) {$1="sigmoid_colon"; $2="stomach"; print $0} else {print $0}}' downstream.analyses/build.matrix/H3K4me3.matrix.tsv > downstream.analyses/build.matrix/tmp; mv downstream.analyses/build.matrix/tmp downstream.analyses/build.matrix/H3K4me3.matrix.tsv
+#******
+
+#******
+# 37. before generating
+# the expression matrix,
+# check that the row order is the same
+# in the 2 tsv files
+diff <(cut -f1 tsv.files/ENCFF268RWA.tsv) <(cut -f1 tsv.files/ENCFF918KPC.tsv)
+#******
+
+#******
+# 38. get expression matrix
+# 1st column = sigmoid_colon
+# 2nd column = stomach
+paste tsv.files/ENCFF268RWA.tsv <(cut -f2 tsv.files/ENCFF918KPC.tsv) | awk 'BEGIN{FS=OFS="\t"; print "sigmoid_colon", "stomach"}{print}' > downstream.analyses/build.matrix/expression.matrix.tsv
+#******
+
+#******
+# 39. check that the row order
+# is the same for expression
+# and H3K4me3 matrices
+diff <(cut -f1 downstream.analyses/build.matrix/H3K4me3.matrix.tsv) <(cut -f1 downstream.analyses/build.matrix/expression.matrix.tsv)
+#******
+
+#******
+# 40. prepare folder to
+# store results of correlation analyses
+mkdir downstream.analyses/scatterplot.correlation
+#******
+
+#******
+# 41. scatterplot with
+# Pearson & Spearman's correlation
+# coefficient between
+# expression and H3K4me3 values
+for tissue in sigmoid_colon stomach; do Rscript ../bin/scatterplot.correlation.R --expression downstream.analyses/build.matrix/expression.matrix.tsv --mark downstream.analyses/build.matrix/H3K4me3.matrix.tsv --tissue "$tissue" --output downstream.analyses/scatterplot.correlation/scatterplot.correlation."$tissue".pdf; done
+#******

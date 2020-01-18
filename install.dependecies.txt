@@ -79,9 +79,25 @@ echo "export PATH=\$PATH:/Users/bborsari/bwtool" >> ~/.bashrc
 # - optparse
 # - ggplot2
 
-
 #~~~~~~~~~~~~~
 # INSTALL md5sum
 #~~~~~~~~~~~~~
 brew install md5sha1sum
 
+#~~~~~~~~~~~~~~
+# INSTALL conda
+#~~~~~~~~~~~~~~
+# for Mac OS
+# follow https://docs.conda.io/projects/conda/en/latest/user-guide/install/macos.html
+echo "export PATH=\$PATH:/Users/bborsari/miniconda2/condabin" >> ~/.bashrc
+
+#~~~~~~~~~~~~~~
+# INSTALL bigbedtobed
+#~~~~~~~~~~~~~~
+conda install -c bioconda ucsc-bigbedtobed
+echo "export PATH=\$PATH:/Users/bborsari/miniconda2/bin" >> ~/.bashrc
+
+#~~~~~~~~~~~~~~
+# INSTALL bedtools
+#~~~~~~~~~~~~~~
+conda install -c bioconda bedtools
