@@ -180,19 +180,19 @@ cat $peaks | while read file; do
 	n=$(echo $n+1 | bc -l)
 		
 	bedtools intersect -a $bedFile -b $file -wao | \
-	awk 'BEGIN { FS=OFS="\t" }{if ( $NF==0 ) {print $1, $2, $3, $7"_"$4, $5, $6 } else {start = ($2>$9)?$2:$9; end = ($3<$10)?$3:$10; print $1, start, end, $7"_"$4, $5, $6 }}' > "$(basename $file .bed)".coordinates.intersection.bed
+	awk 'BEGIN { FS=OFS="\t" }{if ( $NF==0 ) {print $1, $2, $3, $7"_"$4, $5, $6 } else {start = ($2>$9)?$2:$9; end = ($3<$10)?$3:$10; print $1, start, end, $7"_"$4, $5, $6 }}' > "$outFolder"/"$(basename $file .bed)".coordinates.intersection.bed
 		
 		
 	if [[ "$n" == 1 ]]
 	then		
-		echo $(basename $file .bed)".coordinates.intersection.bed" > "$target".path.coordinates.txt
+		echo "$outFolder"/$(basename $file .bed)".coordinates.intersection.bed" > "$outFolder"/"$target".path.coordinates.txt
 	else
-		echo $(basename $file .bed)".coordinates.intersection.bed" >> "$target".path.coordinates.txt
+		echo "$outFolder"/$(basename $file .bed)".coordinates.intersection.bed" >> "$outFolder"/"$target".path.coordinates.txt
 	fi
 done
 
 	
-if [[ $(awk 'END{print NR}' $peaks) != $(awk 'END{print NR}' "$target".path.coordinates.txt) ]]
+if [[ $(awk 'END{print NR}' $peaks) != $(awk 'END{print NR}' "$outFolder"/"$target".path.coordinates.txt) ]]
 then
 	echo "ERROR: length of coordinates file is different from length of input peak calling file"
 	exit 1
@@ -208,16 +208,16 @@ fi
 
 echo -e "bwtool summary of overlapping regions..\n"
 
-n=$(awk 'END{print NR}' "$target".path.coordinates.txt)
+n=$(awk 'END{print NR}' "$outFolder"/"$target".path.coordinates.txt)
 for i in `seq 1 $n`; do
-	bed_coordinates=$(head -$i "$target".path.coordinates.txt | tail -1)
+	bed_coordinates=$(head -$i "$outFolder"/"$target".path.coordinates.txt | tail -1)
 	file=$(head -$i $bw | tail -1)
 	bwtool summary -header -with-sum -keep-bed $bed_coordinates $file "$outFolder"/"$(basename $file .bigWig)".all.genes.summary.tsv
 	if [[ "$i" == 1 ]]
 	then 
-		echo "$outFolder/"$(basename $file .bigWig)".all.genes.summary.tsv" > "$target".path.bwtool.summary.txt
+		echo "$outFolder/"$(basename $file .bigWig)".all.genes.summary.tsv" > "$outFolder"/"$target".path.bwtool.summary.txt
 	else
-		echo "$outFolder/"$(basename $file .bigWig)".all.genes.summary.tsv" >> "$target".path.bwtool.summary.txt
+		echo "$outFolder/"$(basename $file .bigWig)".all.genes.summary.tsv" >> "$outFolder"/"$target".path.bwtool.summary.txt
 	fi
 done
 
@@ -232,7 +232,7 @@ done
 
 echo -e "generate matrix..\n"
 
-file1=$(head -1 "$target".path.bwtool.summary.txt)
+file1=$(head -1 "$outFolder"/"$target".path.bwtool.summary.txt)
 selectColumns name:"$signal" "$file1" | tail -n+2 |awk 'BEGIN{FS=OFS="\t"}{split($1, a, "_"); print a[1], $2}' | sort -k1,1 -k2,2gr | sort -u -k1,1 > "$outFile"
 
 
@@ -241,7 +241,7 @@ then
 	rm $file1
 fi
 
-tail -n+2 "$target".path.bwtool.summary.txt | while read file; do
+tail -n+2 "$outFolder"/"$target".path.bwtool.summary.txt | while read file; do
 	
 	selectColumns name:"$signal" "$file" | tail -n+2 | awk 'BEGIN{FS=OFS="\t"}{split($1, a, "_"); print a[1], $2}' | sort -k1,1 -k2,2gr | sort -u -k1,1 > tmp
 	if [[ $(diff <(cut -f1 "$outFile") <(cut -f1 tmp)) == "" ]]

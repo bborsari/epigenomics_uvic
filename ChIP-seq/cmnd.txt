@@ -292,3 +292,112 @@ mkdir downstream.analyses/scatterplot.correlation
 # expression and H3K4me3 values
 for tissue in sigmoid_colon stomach; do Rscript ../bin/scatterplot.correlation.R --expression downstream.analyses/build.matrix/expression.matrix.tsv --mark downstream.analyses/build.matrix/H3K4me3.matrix.tsv --tissue "$tissue" --output downstream.analyses/scatterplot.correlation/scatterplot.correlation."$tissue".pdf; done
 #******
+
+#******
+# 42. prepare folder to store
+# analysis of genes with peaks
+mkdir downstream.analyses/peaks.analysis
+#******
+
+#******
+# 43. retrieve protein-coding 
+# genes with peaks of H3K4me3
+# in each tissue
+cut -f-2 bigBed.peaks.ids.txt | tail -n+2 | while read filename tissue; do bedtools intersect -a bed.files/gencode.v24.protein.coding.non.redundant.TSS.bed -b bed.files/"$filename".bed -u | cut -f7 | sort -u > downstream.analyses/peaks.analysis/genes.with.peaks."$tissue".txt; done
+#******
+
+#******
+# 44. number of protein-coding 
+# genes with peaks of H3K4me3
+# in each tissue
+wc -l downstream.analyses/peaks.analysis/genes.with.peaks*
+#******
+
+#******
+# 45. retrieve protein-coding 
+# genes with peaks of H3K4me3
+# in BOTH tissues
+../bin/selectRows.sh downstream.analyses/peaks.analysis/genes.with.peaks.stomach.txt downstream.analyses/peaks.analysis/genes.with.peaks.sigmoid_colon.txt | cut -d "." -f1 > downstream.analyses/peaks.analysis/genes.marked.both.tissues.txt
+#******
+
+#******
+# 46. retrieve protein-coding
+# genes with peaks of H3K4me3
+# in only one tissue
+
+# 46.1. genes with stomach-specific peaks
+../bin/discardRows.sh downstream.analyses/peaks.analysis/genes.with.peaks.sigmoid_colon.txt downstream.analyses/peaks.analysis/genes.with.peaks.stomach.txt | cut -d "." -f1 > downstream.analyses/peaks.analysis/genes.with.stomach.specific.peaks.txt
+
+# 46.2. genes with sigmoid_colon-specific peaks
+../bin/discardRows.sh downstream.analyses/peaks.analysis/genes.with.peaks.stomach.txt downstream.analyses/peaks.analysis/genes.with.peaks.sigmoid_colon.txt | cut -d "." -f1 > downstream.analyses/peaks.analysis/genes.with.sigmoid_colon.specific.peaks.txt
+#******
+
+#******
+# 47. retrieve protein-coding genes
+# without peaks of H3K4me3
+# in both tissues
+../bin/discardRows.sh <(cat downstream.analyses/peaks.analysis/genes.marked.both.tissues.txt downstream.analyses/peaks.analysis/genes.with.stomach.specific.peaks.txt downstream.analyses/peaks.analysis/genes.with.sigmoid_colon.specific.peaks.txt) <(cut -f7 bed.files/gencode.v24.protein.coding.gene.body.bed | cut -d "." -f1) > downstream.analyses/peaks.analysis/genes.not.marked.txt
+#******
+
+#******
+# 48. define as universe for GO
+# analysis the set of protein-coding genes
+cut -f7 bed.files/gencode.v24.protein.coding.gene.body.bed | cut -d "." -f1 > downstream.analyses/peaks.analysis/universe.genes.txt
+#******
+
+#******
+# 49. perform GO analysis
+# with Metascape: http://metascape.org/gp/index.html#/main/step1 
+# 49.1.: genes with tissue-specific marking
+# 49.2.: genes with no peaks in any tissue
+#******
+
+#******
+# 50. compare expression
+# between the different sets of genes
+# (a. marked in both tissues,
+# b. marked in stomach
+# c. marked in sigmoid_colon,
+# d. not marked in any tissue)
+Rscript ../bin/boxplot.expression.R --expression downstream.analyses/build.matrix/expression.matrix.tsv --marked_both_tissues downstream.analyses/peaks.analysis/genes.marked.both.tissues.txt --stomach_specific downstream.analyses/peaks.analysis/genes.with.stomach.specific.peaks.txt --sigmoid_colon_specific downstream.analyses/peaks.analysis/genes.with.sigmoid_colon.specific.peaks.txt --not_marked downstream.analyses/peaks.analysis/genes.not.marked.txt --output downstream.analyses/peaks.analysis/boxplot.expression.pdf
+#******
+
+#******
+# 51. instance of json file
+# to run pipeline on TFs
+
+#******
+
+#******
+# 52. retrieve ids for 
+# bigBed peak calling files
+# for POLR2A
+grep -F POLR2A-human metadata.tsv | awk 'BEGIN{FS=OFS="\t"} $2=="bigBed_narrowPeak" && $3=="pseudoreplicated_IDR_thresholded_peaks" && $44!="hg19" {print $1, $7, $19}' | sort -k2,2 >> bigBed.peaks.ids.txt 
+#******
+
+#******
+# 53. download bigBed files 
+# inside the corresponding folders
+awk '$3=="POLR2A-human"{print $1}' bigBed.peaks.ids.txt | while read filename; do wget -P bigBed.files "https://www.encodeproject.org/files/$filename/@@download/$filename.bigBed"; done
+#******
+
+#******
+# 54. check md5sum of 
+# the downloaded bigBed files
+
+# 54.1. retrieve md5sum of the files from the metadata
+../bin/selectRows.sh <(awk '$3=="POLR2A-human"{print $1}' bigBed.peaks.ids.txt) metadata.tsv | cut -f1,41 >> bigBed.files/tmp
+
+# 54.2. compute md5sum on the downloaded files
+cat bigBed.files/tmp | while read filename original_md5sum; do md5sum bigBed.files/"$filename".bigBed | awk -v filename="$filename" -v original_md5sum="$original_md5sum" 'BEGIN{FS=" "; OFS="\t"}{print filename, original_md5sum, $1}'; done >> bigBed.files/md5sum.txt; rm tmp
+
+# 54.3. make sure there are no files 
+# for which original and computed md5sum values differ
+awk '$2!=$3' bigBed.files/md5sum.txt
+#******
+
+#******
+# 55. convert bigBed files 
+# to bed files
+awk '$3=="POLR2A-human"{print $1}' bigBed.peaks.ids.txt | while read filename; do bigBedToBed bigBed.files/"$filename".bigBed bed.files/"$filename".bed; done
+#******

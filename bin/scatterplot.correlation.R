@@ -23,7 +23,7 @@ option_list <- list (
 parser <- OptionParser(
   usage = "%prog [options]", 
   option_list=option_list,
-  description = "\nPlots aggregation signal."
+  description = "\nScatterplot of expression and mark levels."
 )
 
 arguments <- parse_args(parser, positional_arguments = TRUE)
@@ -65,7 +65,7 @@ pearson.cor <- round(cor(log2(df.plot$x+1), df.plot$y, method = "pearson"), 2)
 # 5.2. Spearman
 spearman.cor <- round(cor(log2(df.plot$x+1), df.plot$y, method = "spearman"), 2)
 
-# 4. make plot
+# 6. make plot
 pdf(opt$output, # define the output filename
     width = 4, # specify width and height of the plot
     height=4) 
