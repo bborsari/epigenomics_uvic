@@ -1,0 +1,1 @@
+# cmnd.txt for ATAC-seq analysis

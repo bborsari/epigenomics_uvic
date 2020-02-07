@@ -72,10 +72,9 @@ bash ~/chip-seq-pipeline2/scripts/download_genome_data.sh hg38 pipeline.run/geno
 #*******
 
 #*******
-# 11. check fragment length of IP & control experiments
+# 11. check read length of IP & control experiments
 # please note: you may need to provide it in 
-# the input json file in case
-# the pipeline fails to compute it
+# the input json file
 ../bin/selectRows.sh <(cut -f1 fastq.ids.txt) metadata.tsv | cut -f33
 #*******
 
