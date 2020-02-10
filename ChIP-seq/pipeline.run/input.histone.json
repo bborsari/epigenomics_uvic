@@ -6,8 +6,6 @@
 	"chip.paired_end" : false,
 	"chip.ctl_paired_end": false,
 	"chip.fastqs_rep1_R1" : ["fastq.files/ENCFF128GRD.fastq.gz", "fastq.files/ENCFF268TDD.fastq.gz", "fastq.files/ENCFF671URC.fastq.gz", "fastq.files/ENCFF780JZQ.fastq.gz", "fastq.files/ENCFF877RDK.fastq.gz", "fastq.files/ENCFF598LZD.fastq.gz", "fastq.files/ENCFF856KHQ.fastq.gz", "fastq.files/ENCFF857PEB.fastq.gz"],
-	"chip.ctl_fastqs_rep1_R1" : ["fastq.files/ENCFF752FJE.fastq.gz", "fastq.files/ENCFF425YBL.fastq.gz", "fastq.files/ENCFF233IBR.fastq.gz", "fastq.files/ENCFF362JMQ.fastq.gz"],
-	"chip.subsample_reads" : 1,
-	"chip.ctl_subsample_reads" : 1
+	"chip.ctl_fastqs_rep1_R1" : ["fastq.files/ENCFF752FJE.fastq.gz", "fastq.files/ENCFF425YBL.fastq.gz", "fastq.files/ENCFF233IBR.fastq.gz", "fastq.files/ENCFF362JMQ.fastq.gz"]
 
 }

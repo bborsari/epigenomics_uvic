@@ -23,7 +23,7 @@ grep -F H3K4me3 metadata.tsv | grep -F stomach | awk 'BEGIN{FS="\t"}$2=="fastq"{
 # so we have to retrieve them manually
 # from the experiment's page on the ENCODE portal 
 # (https://www.encodeproject.org/experiments/ENCSR063HOI/)
-grep -F H3K4me3 metadata.tsv | grep -F stomach | awk 'BEGIN{FS=OFS="\t"; print "file_id\ttissue\ttarget\ttype"}$2=="fastq"{print $1, $7, $19, "IP"}' > fastq.ids.txt
+grep -F H3K4me3 metadata.tsv | grep -F stomach | awk 'BEGIN{FS=OFS="\t"; print "file_id\ttissue\ttarget\tsample"}$2=="fastq"{print $1, $7, $19, "IP"}' > fastq.ids.txt
 #*******
 
 #*******

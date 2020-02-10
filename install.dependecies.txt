@@ -78,6 +78,7 @@ echo "export PATH=\$PATH:/Users/bborsari/bwtool" >> ~/.bashrc
 #~~~~~~~~~~~~~~~~~~~~~~~~
 # - optparse
 # - ggplot2
+# - reshape2
 
 #~~~~~~~~~~~~~
 # INSTALL md5sum
