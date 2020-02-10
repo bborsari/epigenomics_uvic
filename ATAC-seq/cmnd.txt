@@ -1,1 +1,2 @@
-# cmnd.txt for ATAC-seq analysis
+# Folder to store results
+# from ATAC-seq hands-on session
