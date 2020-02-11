@@ -7,7 +7,7 @@ LABEL maintainer "Diego Garrido Martín <diego.garrido@crg.eu>" \
 # Install basic tools
 RUN apt-get update --fix-missing -qq && \
         apt-get install -y -q \
-    util-linux \
+    bsdmainutils \
     bc \
     nano \ 
     wget \
@@ -44,11 +44,11 @@ RUN cd software \
     && make \
     && make install
 
-## Install R packages
-RUN R -e 'install.packages( c("optparse", "ggplot2"), repos="http://cloud.r-project.org/");' 
-
 ## Install bigBedToBed
 RUN cd software \
     && wget http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/bigBedToBed \
     && chmod +x bigBedToBed \
     && ln -s /software/bigBedToBed /usr/local/bin/bigBedToBed
+
+## Install R packages
+RUN R -e 'install.packages( c("optparse", "ggplot2"), repos="http://cloud.r-project.org/");' 
