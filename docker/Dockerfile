@@ -7,7 +7,11 @@ LABEL maintainer "Diego Garrido Martín <diego.garrido@crg.eu>" \
 # Install basic tools
 RUN apt-get update --fix-missing -qq && \
         apt-get install -y -q \
+    util-linux \
+    bc \
+    nano \ 
     wget \
+    gawk \
     git-all \
     python \
     r-base \
