@@ -71,7 +71,10 @@ echo "export PATH=\$PATH:/Users/bborsari/bwtool" >> ~/.bashrc
 # - bwtool
 # - bedtools
 # - md5sum
-
+# - column
+# - nano
+# - gawk
+# - bc
 
 #~~~~~~~~~~~~~~~~~~~~~~~~
 # R libraries required:
@@ -79,6 +82,7 @@ echo "export PATH=\$PATH:/Users/bborsari/bwtool" >> ~/.bashrc
 # - optparse
 # - ggplot2
 # - reshape2
+# - VennDiagram
 
 #~~~~~~~~~~~~~
 # INSTALL md5sum
