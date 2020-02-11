@@ -77,10 +77,10 @@ ggplot(df.plot, aes(x=log2(df.plot$x +1),
   geom_smooth(method="lm") +
   theme(plot.title = element_text(hjust = 0.5)) +
   labs(title = opt$tissue) +
-  annotate(geom="text", x=2.5, y=115, 
+  annotate(geom="text", x=2.5, y=80, 
            label=paste0("Pearson cc: ", pearson.cor),
            color="black") +
-  annotate(geom="text", x=2.5, y=105, 
+  annotate(geom="text", x=2.5, y=70, 
            label=paste0("Spearman cc: ", spearman.cor),
            color="black")
 dev.off()
