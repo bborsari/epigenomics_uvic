@@ -23,8 +23,8 @@ RUN mkdir software
 
 ## Install BEDtools
 RUN cd software \
-    && wget --quiet https://github.com/arq5x/bedtools2/releases/download/v2.25.0/bedtools-2.25.0.tar.gz \
-    && tar -zxvf bedtools-2.25.0.tar.gz \
+    && wget --quiet https://github.com/arq5x/bedtools2/releases/download/v2.29.2/bedtools-2.29.2.tar.gz \
+    && tar -zxvf bedtools-2.29.2.tar.gz \
     && cd bedtools2 \
     && make \
     && ln -s /software/bedtools2/bin/bedtools /usr/local/bin/bedtools
@@ -51,4 +51,5 @@ RUN cd software \
     && ln -s /software/bigBedToBed /usr/local/bin/bigBedToBed
 
 ## Install R packages
-RUN R -e 'install.packages( c("optparse", "ggplot2"), repos="http://cloud.r-project.org/");' 
+RUN R -e 'install.packages( c("optparse", "ggplot2", "VennDiagram"), repos="http://cloud.r-project.org/");' 
+
