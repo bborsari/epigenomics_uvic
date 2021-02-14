@@ -69,5 +69,5 @@ venn.diagram(
   output=TRUE, 
   col = "black",
   fill = c(alpha("#1f78b4", 1), alpha('#cc4c02', 1), alpha("#1f78b4", 0.4), alpha('#cc4c02', 0.4)),
-  width = 4000
+  width = 5000
 )
